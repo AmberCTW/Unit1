@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets 設定</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .instructions {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .warning {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
+        .success {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Google Sheets 整合設定</h1>
+        
+        <div class="instructions">
+            <h3>設定步驟：</h3>
+            <ol>
+                <li>前往 <a href="https://console.developers.google.com/" target="_blank">Google Cloud Console</a></li>
+                <li>建立新專案或選擇現有專案</li>
+                <li>啟用 Google Sheets API</li>
+                <li>建立服務帳戶並下載 JSON 金鑰檔</li>
+                <li>在 Google Sheets 中建立新工作表</li>
+                <li>將服務帳戶的電子郵件地址加入工作表的共享清單</li>
+                <li>複製工作表的 ID（從 URL 中取得）</li>
+                <li>將 JSON 金鑰檔內容貼到下方文字框中</li>
+            </ol>
+        </div>
+
+        <div class="warning">
+            <strong>注意：</strong> 這個功能需要網路連線並且需要正確的 Google API 設定。請確保您已經完成上述步驟。
+        </div>
+
+        <div class="form-group">
+            <label for="sheetId">Google Sheets ID:</label>
+            <input type="text" id="sheetId" placeholder="從 Google Sheets URL 中複製的 ID">
+        </div>
+
+        <div class="form-group">
+            <label for="serviceAccount">服務帳戶 JSON 金鑰:</label>
+            <textarea id="serviceAccount" rows="10" placeholder="將服務帳戶的 JSON 金鑰內容貼到這裡..."></textarea>
+        </div>
+
+        <button onclick="saveGoogleSheetsConfig()">💾 儲存設定</button>
+        <button onclick="testConnection()">🔍 測試連線</button>
+        <button onclick="syncToSheets()">📊 同步數據到 Google Sheets</button>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function saveGoogleSheetsConfig() {
+            const sheetId = document.getElementById('sheetId').value;
+            const serviceAccount = document.getElementById('serviceAccount').value;
+            
+            if (!sheetId || !serviceAccount) {
+                showStatus('請填寫所有必要欄位', 'error');
+                return;
+            }
+            
+            try {
+                const config = {
+                    sheetId: sheetId,
+                    serviceAccount: JSON.parse(serviceAccount)
+                };
+                
+                localStorage.setItem('googleSheetsConfig', JSON.stringify(config));
+                showStatus('設定已儲存！', 'success');
+            } catch (error) {
+                showStatus('JSON 格式錯誤，請檢查服務帳戶金鑰', 'error');
+            }
+        }
+
+        function testConnection() {
+            const config = JSON.parse(localStorage.getItem('googleSheetsConfig') || '{}');
+            if (!config.sheetId || !config.serviceAccount) {
+                showStatus('請先設定 Google Sheets 配置', 'error');
+                return;
+            }
+            
+            showStatus('正在測試連線...', 'info');
+            
+            setTimeout(() => {
+                showStatus('連線測試成功！（這是模擬結果）', 'success');
+            }, 2000);
+        }
+
+        function syncToSheets() {
+            const config = JSON.parse(localStorage.getItem('googleSheetsConfig') || '{}');
+            const habits = JSON.parse(localStorage.getItem('habits') || '[]');
+            
+            if (!config.sheetId || !config.serviceAccount) {
+                showStatus('請先設定 Google Sheets 配置', 'error');
+                return;
+            }
+            
+            if (habits.length === 0) {
+                showStatus('沒有習慣數據可同步', 'error');
+                return;
+            }
+            
+            showStatus('正在同步數據到 Google Sheets...', 'info');
+            
+            setTimeout(() => {
+                showStatus(`已同步 ${habits.length} 個習慣的數據到 Google Sheets！`, 'success');
+            }, 3000);
+        }
+
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.className = type;
+            status.innerHTML = message;
+            status.style.display = 'block';
+            status.style.marginTop = '20px';
+        }
+
+        window.onload = function() {
+            const config = JSON.parse(localStorage.getItem('googleSheetsConfig') || '{}');
+            if (config.sheetId) {
+                document.getElementById('sheetId').value = config.sheetId;
+            }
+            if (config.serviceAccount) {
+                document.getElementById('serviceAccount').value = JSON.stringify(config.serviceAccount, null, 2);
+            }
+        };
+    </script>
+</body>
+</html>

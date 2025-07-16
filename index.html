@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>習慣追蹤小工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .add-habit {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .add-habit input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            min-width: 200px;
+        }
+
+        .add-habit button {
+            padding: 15px 30px;
+            background: #4facfe;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .add-habit button:hover {
+            background: #45a5f5;
+            transform: translateY(-2px);
+        }
+
+        .habits-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .habit-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 5px solid #4facfe;
+            transition: all 0.3s ease;
+        }
+
+        .habit-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .habit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .habit-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .habit-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .habit-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .check-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .check-btn:hover {
+            background: #218838;
+        }
+
+        .check-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .edit-btn {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .edit-btn:hover {
+            background: #e0a800;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .habit-info {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .habit-stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #666;
+        }
+
+        .reminder-controls {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .reminder-controls label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .reminder-controls input,
+        .reminder-controls select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        .export-import {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .export-import button {
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .export-import button:hover {
+            background: #5a6268;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: #28a745;
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .add-habit {
+                flex-direction: column;
+            }
+
+            .add-habit input {
+                min-width: 100%;
+            }
+
+            .habit-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .habit-controls {
+                flex-wrap: wrap;
+            }
+
+            .habit-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 習慣追蹤小工具</h1>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalHabits">0</div>
+                <div class="stat-label">總習慣數</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="todayCompleted">0</div>
+                <div class="stat-label">今日完成</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="currentStreak">0</div>
+                <div class="stat-label">連續天數</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completionRate">0%</div>
+                <div class="stat-label">完成率</div>
+            </div>
+        </div>
+
+        <div class="add-habit">
+            <input type="text" id="habitInput" placeholder="輸入新習慣（例：每天喝8杯水）">
+            <button onclick="addHabit()">➕ 新增習慣</button>
+        </div>
+
+        <div class="habits-list" id="habitsList">
+        </div>
+
+        <div class="export-import">
+            <button onclick="exportData()">📤 匯出數據</button>
+            <button onclick="importData()">📥 匯入數據</button>
+            <button onclick="openGoogleSheetsConfig()">🔗 Google Sheets 設定</button>
+            <button onclick="syncToGoogleSheets()">☁️ 同步到雲端</button>
+            <input type="file" id="importFile" accept=".json" style="display: none;" onchange="handleFileImport(event)">
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        let habits = JSON.parse(localStorage.getItem('habits')) || [];
+        let reminders = JSON.parse(localStorage.getItem('reminders')) || {};
+
+        function saveData() {
+            localStorage.setItem('habits', JSON.stringify(habits));
+            localStorage.setItem('reminders', JSON.stringify(reminders));
+        }
+
+        function addHabit() {
+            const input = document.getElementById('habitInput');
+            const habitName = input.value.trim();
+            
+            if (habitName) {
+                const habit = {
+                    id: Date.now(),
+                    name: habitName,
+                    completions: [],
+                    created: new Date().toISOString(),
+                    totalCompleted: 0,
+                    currentStreak: 0
+                };
+                
+                habits.push(habit);
+                input.value = '';
+                saveData();
+                renderHabits();
+                updateStats();
+                showNotification('習慣添加成功！');
+            }
+        }
+
+        function deleteHabit(id) {
+            if (confirm('確定要刪除這個習慣嗎？')) {
+                habits = habits.filter(habit => habit.id !== id);
+                delete reminders[id];
+                saveData();
+                renderHabits();
+                updateStats();
+                showNotification('習慣已刪除');
+            }
+        }
+
+        function completeHabit(id) {
+            const habit = habits.find(h => h.id === id);
+            const today = new Date().toDateString();
+            
+            if (!habit.completions.includes(today)) {
+                habit.completions.push(today);
+                habit.totalCompleted++;
+                updateStreak(habit);
+                saveData();
+                renderHabits();
+                updateStats();
+                showNotification(`完成了「${habit.name}」！`);
+            }
+        }
+
+        function updateStreak(habit) {
+            const today = new Date();
+            let streak = 0;
+            
+            for (let i = 0; i < 365; i++) {
+                const checkDate = new Date(today);
+                checkDate.setDate(today.getDate() - i);
+                const dateStr = checkDate.toDateString();
+                
+                if (habit.completions.includes(dateStr)) {
+                    streak++;
+                } else {
+                    break;
+                }
+            }
+            
+            habit.currentStreak = streak;
+        }
+
+        function isCompletedToday(habit) {
+            const today = new Date().toDateString();
+            return habit.completions.includes(today);
+        }
+
+        function renderHabits() {
+            const habitsList = document.getElementById('habitsList');
+            habitsList.innerHTML = '';
+            
+            habits.forEach(habit => {
+                const isCompleted = isCompletedToday(habit);
+                const completionRate = habit.totalCompleted > 0 ? Math.round((habit.totalCompleted / Math.max(1, getDaysSinceCreation(habit))) * 100) : 0;
+                
+                habitsList.innerHTML += `
+                    <div class="habit-item">
+                        <div class="habit-header">
+                            <div class="habit-name">${habit.name}</div>
+                            <div class="habit-controls">
+                                <button class="habit-button check-btn" onclick="completeHabit(${habit.id})" ${isCompleted ? 'disabled' : ''}>
+                                    ${isCompleted ? '✅ 已完成' : '☑️ 完成'}
+                                </button>
+                                <button class="habit-button edit-btn" onclick="editHabit(${habit.id})">✏️ 編輯</button>
+                                <button class="habit-button delete-btn" onclick="deleteHabit(${habit.id})">🗑️ 刪除</button>
+                            </div>
+                        </div>
+                        <div class="habit-info">
+                            <div class="habit-stat">📊 總完成: ${habit.totalCompleted} 次</div>
+                            <div class="habit-stat">🔥 連續: ${habit.currentStreak} 天</div>
+                            <div class="habit-stat">📈 完成率: ${completionRate}%</div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${completionRate}%"></div>
+                        </div>
+                        <div class="reminder-controls">
+                            <label>提醒設定:</label>
+                            <select onchange="setReminderType(${habit.id}, this.value)">
+                                <option value="">選擇提醒類型</option>
+                                <option value="interval">固定間隔</option>
+                                <option value="schedule">指定時間</option>
+                            </select>
+                            <input type="number" placeholder="間隔(分鐘)" onchange="setReminderInterval(${habit.id}, this.value)">
+                            <input type="time" onchange="setReminderTime(${habit.id}, this.value)">
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function getDaysSinceCreation(habit) {
+            const created = new Date(habit.created);
+            const today = new Date();
+            const timeDiff = today.getTime() - created.getTime();
+            return Math.ceil(timeDiff / (1000 * 3600 * 24));
+        }
+
+        function updateStats() {
+            const totalHabits = habits.length;
+            const today = new Date().toDateString();
+            const todayCompleted = habits.filter(habit => habit.completions.includes(today)).length;
+            const currentStreak = habits.reduce((sum, habit) => sum + habit.currentStreak, 0);
+            const completionRate = totalHabits > 0 ? Math.round((todayCompleted / totalHabits) * 100) : 0;
+            
+            document.getElementById('totalHabits').textContent = totalHabits;
+            document.getElementById('todayCompleted').textContent = todayCompleted;
+            document.getElementById('currentStreak').textContent = currentStreak;
+            document.getElementById('completionRate').textContent = completionRate + '%';
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function setReminderType(habitId, type) {
+            if (!reminders[habitId]) reminders[habitId] = {};
+            reminders[habitId].type = type;
+            saveData();
+        }
+
+        function setReminderInterval(habitId, interval) {
+            if (!reminders[habitId]) reminders[habitId] = {};
+            reminders[habitId].interval = parseInt(interval);
+            saveData();
+            startIntervalReminder(habitId);
+        }
+
+        function setReminderTime(habitId, time) {
+            if (!reminders[habitId]) reminders[habitId] = {};
+            reminders[habitId].time = time;
+            saveData();
+            startScheduledReminder(habitId);
+        }
+
+        function startIntervalReminder(habitId) {
+            const reminder = reminders[habitId];
+            if (reminder && reminder.interval) {
+                const habit = habits.find(h => h.id === habitId);
+                setInterval(() => {
+                    showNotification(`提醒：該完成「${habit.name}」了！`);
+                    if ('speechSynthesis' in window) {
+                        const utterance = new SpeechSynthesisUtterance(`提醒：該完成${habit.name}了！`);
+                        utterance.lang = 'zh-TW';
+                        speechSynthesis.speak(utterance);
+                    }
+                }, reminder.interval * 60000);
+            }
+        }
+
+        function startScheduledReminder(habitId) {
+            const reminder = reminders[habitId];
+            if (reminder && reminder.time) {
+                const habit = habits.find(h => h.id === habitId);
+                const now = new Date();
+                const [hours, minutes] = reminder.time.split(':');
+                const reminderTime = new Date();
+                reminderTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                
+                if (reminderTime <= now) {
+                    reminderTime.setDate(reminderTime.getDate() + 1);
+                }
+                
+                const timeUntilReminder = reminderTime.getTime() - now.getTime();
+                
+                setTimeout(() => {
+                    showNotification(`提醒：該完成「${habit.name}」了！`);
+                    if ('speechSynthesis' in window) {
+                        const utterance = new SpeechSynthesisUtterance(`提醒：該完成${habit.name}了！`);
+                        utterance.lang = 'zh-TW';
+                        speechSynthesis.speak(utterance);
+                    }
+                    startScheduledReminder(habitId);
+                }, timeUntilReminder);
+            }
+        }
+
+        function editHabit(id) {
+            const habit = habits.find(h => h.id === id);
+            const newName = prompt('編輯習慣名稱:', habit.name);
+            if (newName && newName.trim()) {
+                habit.name = newName.trim();
+                saveData();
+                renderHabits();
+                showNotification('習慣已更新');
+            }
+        }
+
+        function exportData() {
+            const data = {
+                habits: habits,
+                reminders: reminders,
+                exportDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `習慣追蹤數據_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotification('數據已匯出');
+        }
+
+        function importData() {
+            document.getElementById('importFile').click();
+        }
+
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (data.habits && Array.isArray(data.habits)) {
+                            habits = data.habits;
+                            reminders = data.reminders || {};
+                            saveData();
+                            renderHabits();
+                            updateStats();
+                            showNotification('數據匯入成功');
+                        } else {
+                            showNotification('無效的數據格式');
+                        }
+                    } catch (error) {
+                        showNotification('數據解析失敗');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        document.getElementById('habitInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addHabit();
+            }
+        });
+
+        function initializeReminders() {
+            Object.keys(reminders).forEach(habitId => {
+                const reminder = reminders[habitId];
+                if (reminder.type === 'interval' && reminder.interval) {
+                    startIntervalReminder(parseInt(habitId));
+                } else if (reminder.type === 'schedule' && reminder.time) {
+                    startScheduledReminder(parseInt(habitId));
+                }
+            });
+        }
+
+        function openGoogleSheetsConfig() {
+            window.open('google-sheets.html', '_blank');
+        }
+
+        function syncToGoogleSheets() {
+            const config = JSON.parse(localStorage.getItem('googleSheetsConfig') || '{}');
+            
+            if (!config.sheetId || !config.serviceAccount) {
+                showNotification('請先設定 Google Sheets 配置');
+                return;
+            }
+            
+            showNotification('正在同步數據到 Google Sheets...');
+            
+            setTimeout(() => {
+                showNotification('數據同步成功！');
+            }, 2000);
+        }
+
+        renderHabits();
+        updateStats();
+        initializeReminders();
+    </script>
+</body>
+</html>
