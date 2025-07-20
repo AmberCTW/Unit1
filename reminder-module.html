@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>定時並重複提醒模組</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .reminder-card {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            background: #fafafa;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        #scheduleType {
+            width: fit-content;
+            max-width: 100px;
+            min-width: 80px;
+        }
+
+        .form-group textarea {
+            height: 120px;
+            resize: vertical;
+        }
+
+        .mode-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .mode-btn:hover {
+            border-color: #007bff;
+        }
+        
+        .mode-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            flex: 1;
+        }
+        
+        .mode-checkbox:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+        
+        .mode-checkbox input[type="checkbox"] {
+            margin: 0;
+            transform: scale(1.2);
+        }
+        
+        .mode-checkbox .checkmark {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .mode-checkbox input[type="checkbox"]:checked + .checkmark {
+            color: #007bff;
+        }
+
+        .mode-config {
+            display: none;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .mode-config.active {
+            display: block;
+        }
+
+        .interval-config {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .interval-config input {
+            width: 80px;
+        }
+
+        .schedule-config {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .action-types {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .action-type {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-type.active {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+
+        .action-config {
+            display: none;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .action-config.active {
+            display: block;
+        }
+
+        .duration-config {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .duration-config input {
+            width: 80px;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .action-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .action-checkbox:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+
+        .action-checkbox input[type="checkbox"] {
+            margin: 0;
+            transform: scale(1.2);
+        }
+
+        .action-checkbox .checkmark {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .action-checkbox input[type="checkbox"]:checked + .checkmark {
+            color: #007bff;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .checkbox-item:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .checkbox-item input[type="checkbox"]:checked + span {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .weekday-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .weekday-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .weekday-item input[type="checkbox"] {
+            display: none;
+        }
+
+        .weekday-item span {
+            width: 18px;
+            height: 18px;
+            border: 1px solid #ddd;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 10px;
+            color: #666;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .weekday-item:hover span {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+
+        .weekday-item input[type="checkbox"]:checked + span {
+            border-color: #007bff;
+            background: #007bff;
+            color: white;
+        }
+
+        .month-day-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .month-day-input input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .month-day-input button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+
+        .month-day-input button:hover {
+            background: #0056b3;
+        }
+
+        .selected-days {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .day-tag {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #e9ecef;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+            color: #495057;
+        }
+
+        .day-tag .remove-day {
+            cursor: pointer;
+            color: #dc3545;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .day-tag .remove-day:hover {
+            color: #c82333;
+        }
+        
+        .time-range {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .time-range input[type="time"] {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .time-range span {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-stopped {
+            background: #dc3545;
+        }
+
+        .status-running {
+            background: #28a745;
+        }
+
+        .status-paused {
+            background: #ffc107;
+        }
+
+        .log-area {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .log-entry.success {
+            color: #28a745;
+        }
+
+        .log-entry.error {
+            color: #dc3545;
+        }
+
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .file-item:hover {
+            background: #e9ecef;
+        }
+
+        .file-name {
+            color: #333;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .remove-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+        }
+
+        .remove-btn:hover {
+            background: #c82333;
+        }
+
+        .empty-list {
+            color: #666;
+            font-size: 12px;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .interval-config,
+            .duration-config,
+            .control-buttons {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .mode-selector {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⏰ 定時並重複提醒模組</h1>
+        
+        <div class="reminder-card">
+            <div class="form-group">
+                <label>提醒名稱</label>
+                <input type="text" id="reminderName" placeholder="輸入提醒名稱" value="每日提醒">
+            </div>
+
+            <!-- 模式選擇 -->
+            <h3>提醒模式（可複選）</h3>
+            <div class="mode-selector">
+                <label class="mode-checkbox">
+                    <input type="checkbox" id="intervalModeCheckbox" checked onchange="toggleMode('interval')">
+                    <span class="checkmark">模式 A：間隔提醒</span>
+                </label>
+                <label class="mode-checkbox">
+                    <input type="checkbox" id="scheduleModeCheckbox" onchange="toggleMode('schedule')">
+                    <span class="checkmark">模式 B：排程提醒</span>
+                </label>
+            </div>
+
+            <!-- 模式 A：間隔提醒設定 -->
+            <div id="intervalConfig" class="mode-config active">
+                <div class="form-group">
+                    <label>間隔設定</label>
+                    <div class="interval-config">
+                        <span>每</span>
+                        <input type="number" id="intervalValue" min="1" value="30" onchange="handleSettingChange(event);" oninput="handleSettingChange(event);">
+                        <select id="intervalUnit" onchange="handleSettingChange(event);">
+                            <option value="minutes" selected>分鐘</option>
+                            <option value="hours">小時</option>
+                            <option value="days">天</option>
+                            <option value="weeks">週</option>
+                            <option value="months">月</option>
+                        </select>
+                        <span>執行一次</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 模式 B：排程提醒設定 -->
+            <div id="scheduleConfig" class="mode-config">
+                <div class="schedule-config">
+                    <div class="form-group">
+                        <label>排程類型</label>
+                        <select id="scheduleType" onchange="updateScheduleConfig(); handleSettingChange(event);">
+                            <option value="weekly">每週</option>
+                            <option value="monthly">每月</option>
+                            <option value="daily">每天</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="weeklyConfig">
+                        <label>星期</label>
+                        <div class="weekday-selector">
+                            <label class="weekday-item">
+                                <input type="checkbox" value="1" onchange="updateSelectedWeekdays()">
+                                <span>一</span>
+                            </label>
+                            <label class="weekday-item">
+                                <input type="checkbox" value="2" onchange="updateSelectedWeekdays()">
+                                <span>二</span>
+                            </label>
+                            <label class="weekday-item">
+                                <input type="checkbox" value="3" onchange="updateSelectedWeekdays()">
+                                <span>三</span>
+                            </label>
+                            <label class="weekday-item">
+                                <input type="checkbox" value="4" onchange="updateSelectedWeekdays()">
+                                <span>四</span>
+                            </label>
+                            <label class="weekday-item">
+                                <input type="checkbox" value="5" onchange="updateSelectedWeekdays()">
+                                <span>五</span>
+                            </label>
+                            <label class="weekday-item">
+                                <input type="checkbox" value="6" onchange="updateSelectedWeekdays()">
+                                <span>六</span>
+                            </label>
+                            <label class="weekday-item">
+                                <input type="checkbox" value="0" onchange="updateSelectedWeekdays()">
+                                <span>日</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="monthlyConfig" style="display: none;">
+                        <label>日期</label>
+                        <div class="month-day-input">
+                            <input type="number" id="monthDayInput" min="1" max="31" placeholder="輸入日期" onkeypress="if(event.key==='Enter') addMonthDay()">
+                            <button type="button" onclick="addMonthDay()">新增</button>
+                        </div>
+                        <div class="selected-days" id="selectedDaysDisplay"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>時間範圍</label>
+                        <div class="time-range">
+                            <input type="time" id="scheduleStartTime" value="09:30">
+                            <span>至</span>
+                            <input type="time" id="scheduleEndTime" value="17:30">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 動作類型選擇 -->
+            <div class="form-group">
+                <label>提醒動作（可複選）</label>
+                <div class="action-types">
+                    <label class="action-checkbox">
+                        <input type="checkbox" id="voiceAction" checked onchange="toggleAction('voice')">
+                        <span class="checkmark">🔊 語音提醒</span>
+                    </label>
+                    <label class="action-checkbox">
+                        <input type="checkbox" id="linkAction" onchange="toggleAction('link')">
+                        <span class="checkmark">🔗 開啟連結</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 語音提醒設定 -->
+            <div id="voiceConfig" class="action-config active">
+                <div class="form-group">
+                    <label>語音類型</label>
+                    <select id="voiceType" onchange="updateVoiceConfig(); handleSettingChange(event);">
+                        <option value="tts">文字轉語音</option>
+                        <option value="file">本地音檔</option>
+                    </select>
+                </div>
+                <div class="form-group" id="ttsConfig">
+                    <label>提示文字（每行一個，系統會隨機選擇）</label>
+                    <textarea id="ttsTexts" placeholder="該休息一下了！&#10;記得喝水哦！&#10;站起來活動一下吧！">該休息一下了！
+記得喝水哦！
+站起來活動一下吧！</textarea>
+                </div>
+                <div class="form-group" id="fileConfig" style="display: none;">
+                    <label>音檔列表（系統會隨機選擇）</label>
+                    <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                        <input type="file" id="audioFileInput" accept="audio/*" style="flex: 1;">
+                        <button type="button" onclick="addAudioFile()" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                            ➕ 加入
+                        </button>
+                    </div>
+                    <div id="audioFilesList" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+
+            <!-- 開啟連結設定 -->
+            <div id="linkConfig" class="action-config">
+                <div class="form-group">
+                    <label>網址列表（每行一個，系統會隨機選擇）</label>
+                    <textarea id="linkUrls" placeholder="https://www.google.com&#10;https://www.youtube.com&#10;https://github.com">https://www.google.com
+https://www.youtube.com
+https://github.com</textarea>
+                </div>
+            </div>
+
+
+            <!-- 播放時長設定 -->
+            <div class="form-group">
+                <label>播放時長</label>
+                <div class="duration-config">
+                    <input type="number" id="durationValue" min="1" value="5">
+                    <select id="durationUnit">
+                        <option value="seconds" selected>秒</option>
+                        <option value="minutes">分鐘</option>
+                        <option value="hours">小時</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 重複設定 -->
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="isRepeating" checked>
+                    重複執行
+                </label>
+            </div>
+
+            <!-- 控制按鈕 -->
+            <div class="control-buttons">
+                <button class="btn btn-success" id="startBtn" onclick="startReminder()">
+                    <span class="status-indicator status-stopped"></span>
+                    啟動提醒
+                </button>
+                <button class="btn btn-warning" id="pauseBtn" onclick="pauseReminder()" disabled>
+                    暫停
+                </button>
+                <button class="btn btn-danger" id="stopBtn" onclick="stopReminder()" disabled>
+                    停止
+                </button>
+                <button class="btn btn-primary" onclick="testReminder()">
+                    測試提醒
+                </button>
+            </div>
+
+            <!-- 日誌區域 -->
+            <div class="log-area" id="logArea">
+                <div class="log-entry">系統就緒，請設定提醒參數</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局變量
+        let selectedModes = ['interval']; // 使用陣列支持多個模式
+        let selectedActions = ['voice']; // 使用陣列支持多個動作
+        let reminderState = 'stopped'; // stopped, running, paused
+        let intervalTimerId = null; // 間隔提醒的計時器
+        let scheduleTimerId = null; // 排程提醒的計時器
+        let uiUpdateTimerId = null; // UI狀態更新計時器
+        let lastIntervalExecution = 0; // 記錄上次間隔提醒執行時間
+        let currentAudio = null;
+        let reminderStartTime = null;
+        let pausedTime = null;
+        let selectedAudioFiles = []; // 儲存選擇的音檔文件對象
+        let audioFilesList = []; // 儲存音檔信息（用於保存）
+        let selectedWeekdays = ['1']; // 選中的星期
+        let selectedMonthDays = ['1']; // 選中的日期
+        let timeoutId = null; // 語音播放超時ID
+        let voicePlaybackState = {
+            isPlaying: false,
+            startTime: null,
+            duration: 0,
+            intervalId: null
+        };
+
+        // 設定保存
+        function saveSettings() {
+            const settings = {
+                reminderName: document.getElementById('reminderName').value,
+                selectedModes: selectedModes,
+                selectedActions: selectedActions,
+                intervalValue: document.getElementById('intervalValue').value,
+                intervalUnit: document.getElementById('intervalUnit').value,
+                scheduleType: document.getElementById('scheduleType').value,
+                selectedWeekdays: selectedWeekdays,
+                selectedMonthDays: selectedMonthDays,
+                scheduleStartTime: document.getElementById('scheduleStartTime').value,
+                scheduleEndTime: document.getElementById('scheduleEndTime').value,
+                voiceType: document.getElementById('voiceType').value,
+                ttsTexts: document.getElementById('ttsTexts').value,
+                linkUrls: document.getElementById('linkUrls').value,
+                durationValue: document.getElementById('durationValue').value,
+                durationUnit: document.getElementById('durationUnit').value,
+                isRepeating: document.getElementById('isRepeating').checked,
+                audioFilesList: audioFilesList
+            };
+            
+            localStorage.setItem('reminderSettings', JSON.stringify(settings));
+        }
+
+        // 設定載入
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('reminderSettings');
+            if (!savedSettings) return;
+            
+            try {
+                const settings = JSON.parse(savedSettings);
+                
+                // 載入基本設定
+                document.getElementById('reminderName').value = settings.reminderName || '每日提醒';
+                document.getElementById('intervalValue').value = settings.intervalValue || '30';
+                document.getElementById('intervalUnit').value = settings.intervalUnit || 'minutes';
+                document.getElementById('scheduleType').value = settings.scheduleType || 'weekly';
+                selectedWeekdays = settings.selectedWeekdays || ['1'];
+                selectedMonthDays = settings.selectedMonthDays || ['1'];
+                
+                // 更新星期和日期顯示
+                updateWeekdayCheckboxes();
+                updateSelectedDaysDisplay();
+                document.getElementById('scheduleStartTime').value = settings.scheduleStartTime || '09:30';
+                document.getElementById('scheduleEndTime').value = settings.scheduleEndTime || '17:30';
+                document.getElementById('voiceType').value = settings.voiceType || 'tts';
+                document.getElementById('ttsTexts').value = settings.ttsTexts || '該休息一下了！\n記得喝水哦！\n站起來活動一下吧！';
+                document.getElementById('linkUrls').value = settings.linkUrls || 'https://www.google.com\nhttps://www.youtube.com\nhttps://github.com';
+                
+                // 載入音檔列表
+                if (settings.audioFilesList) {
+                    audioFilesList = settings.audioFilesList;
+                    renderAudioFilesList();
+                    
+                    // 由於 File 對象無法保存到 localStorage，需要清空並提示用戶重新選擇
+                    selectedAudioFiles = [];
+                    if (audioFilesList.length > 0) {
+                        addLog(`發現 ${audioFilesList.length} 個音檔記錄，但需要重新選擇音檔文件`, 'info');
+                    }
+                }
+                
+                // 載入應用程式顯示
+                document.getElementById('durationValue').value = settings.durationValue || '5';
+                document.getElementById('durationUnit').value = settings.durationUnit || 'seconds';
+                document.getElementById('isRepeating').checked = settings.isRepeating !== false;
+                
+                // 載入模式和動作
+                if (settings.selectedModes) {
+                    selectedModes = settings.selectedModes;
+                } else {
+                    selectedModes = ['interval']; // 預設啟用間隔提醒
+                }
+                updateModeCheckboxes();
+                if (settings.selectedActions) {
+                    selectedActions = settings.selectedActions;
+                } else {
+                    selectedActions = ['voice']; // 預設啟用語音提醒
+                }
+                updateActionCheckboxes();
+                
+                // 更新相關UI
+                updateScheduleConfig();
+                updateVoiceConfig();
+                
+                addLog('設定已載入');
+            } catch (error) {
+                addLog('載入設定時發生錯誤', 'error');
+            }
+        }
+
+        // 模式選擇
+        // 模式切換（複選）
+        function toggleMode(mode) {
+            const checkbox = document.getElementById(mode + 'ModeCheckbox');
+            const oldModes = [...selectedModes];
+            
+            if (checkbox.checked) {
+                if (!selectedModes.includes(mode)) {
+                    selectedModes.push(mode);
+                }
+            } else {
+                selectedModes = selectedModes.filter(m => m !== mode);
+            }
+            
+            console.log('toggleMode called, selectedModes now:', selectedModes);
+            updateModeConfigs();
+            addLog(`設定已更新：${checkbox.checked ? '啟用' : '關閉'}${mode === 'interval' ? '間隔提醒' : '排程提醒'}模式`, 'info');
+            saveSettings();
+            
+            // 如果提醒正在運行，重新啟動相關提醒
+            if (reminderState === 'running' && JSON.stringify(oldModes) !== JSON.stringify(selectedModes)) {
+                if (mode === 'interval') {
+                    if (checkbox.checked) {
+                        addLog('間隔提醒模式已啟用，立即啟動', 'info');
+                        startIntervalReminder();
+                    } else {
+                        addLog('間隔提醒模式已關閉，停止間隔提醒', 'info');
+                        if (intervalTimerId) {
+                            clearInterval(intervalTimerId);
+                            intervalTimerId = null;
+                        }
+                    }
+                } else if (mode === 'schedule') {
+                    if (checkbox.checked) {
+                        addLog('排程提醒模式已啟用，立即啟動', 'info');
+                        startScheduleReminder();
+                    } else {
+                        addLog('排程提醒模式已關閉，停止排程提醒', 'info');
+                        if (scheduleTimerId) {
+                            clearInterval(scheduleTimerId);
+                            scheduleTimerId = null;
+                        }
+                        // 如果同時啟用間隔提醒，重新啟動以移除排程範圍限制
+                        if (selectedModes.includes('interval')) {
+                            addLog('移除排程範圍限制，重新啟動間隔提醒', 'info');
+                            restartIntervalReminder();
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 更新模式配置顯示
+        function updateModeConfigs() {
+            // 間隔提醒配置
+            const intervalConfig = document.getElementById('intervalConfig');
+            if (selectedModes.includes('interval')) {
+                intervalConfig.style.display = 'block';
+            } else {
+                intervalConfig.style.display = 'none';
+            }
+            
+            // 排程提醒配置
+            const scheduleConfig = document.getElementById('scheduleConfig');
+            if (selectedModes.includes('schedule')) {
+                scheduleConfig.style.display = 'block';
+            } else {
+                scheduleConfig.style.display = 'none';
+            }
+        }
+        
+        // 更新模式複選框狀態
+        function updateModeCheckboxes() {
+            const intervalCheckbox = document.getElementById('intervalModeCheckbox');
+            const scheduleCheckbox = document.getElementById('scheduleModeCheckbox');
+            
+            if (intervalCheckbox) {
+                intervalCheckbox.checked = selectedModes.includes('interval');
+            }
+            if (scheduleCheckbox) {
+                scheduleCheckbox.checked = selectedModes.includes('schedule');
+            }
+            
+            console.log('updateModeCheckboxes called, selectedModes:', selectedModes);
+            console.log('Checkbox states:', {
+                interval: intervalCheckbox ? intervalCheckbox.checked : 'not found',
+                schedule: scheduleCheckbox ? scheduleCheckbox.checked : 'not found'
+            });
+            
+            updateModeConfigs();
+        }
+
+        // 動作切換（複選）
+        function toggleAction(action) {
+            const checkbox = document.getElementById(action + 'Action');
+            
+            if (checkbox.checked) {
+                if (!selectedActions.includes(action)) {
+                    selectedActions.push(action);
+                }
+            } else {
+                selectedActions = selectedActions.filter(a => a !== action);
+            }
+            
+            updateActionConfigs();
+            addLog(`設定已更新：${checkbox.checked ? '啟用' : '關閉'}${getActionName(action)}動作`, 'info');
+            saveSettings();
+        }
+        
+        // 更新動作配置顯示
+        function updateActionConfigs() {
+            // 語音配置
+            const voiceConfig = document.getElementById('voiceConfig');
+            if (selectedActions.includes('voice')) {
+                voiceConfig.style.display = 'block';
+            } else {
+                voiceConfig.style.display = 'none';
+            }
+            
+            // 連結配置
+            const linkConfig = document.getElementById('linkConfig');
+            if (selectedActions.includes('link')) {
+                linkConfig.style.display = 'block';
+            } else {
+                linkConfig.style.display = 'none';
+            }
+        }
+        
+        // 更新動作複選框狀態
+        function updateActionCheckboxes() {
+            document.getElementById('voiceAction').checked = selectedActions.includes('voice');
+            document.getElementById('linkAction').checked = selectedActions.includes('link');
+            updateActionConfigs();
+        }
+        
+        // 更新選中的星期
+        function updateSelectedWeekdays() {
+            const checkboxes = document.querySelectorAll('#weeklyConfig input[type="checkbox"]');
+            const oldWeekdays = [...selectedWeekdays];
+            selectedWeekdays = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    selectedWeekdays.push(cb.value);
+                }
+            });
+            
+            // 記錄變更
+            if (JSON.stringify(oldWeekdays) !== JSON.stringify(selectedWeekdays)) {
+                addLog(`設定已更新：星期選擇 = ${getWeekdayNames(selectedWeekdays)}`, 'info');
+            }
+            
+            saveSettings();
+            
+            // 如果排程提醒正在運行，重新啟動
+            if (reminderState === 'running' && selectedModes.includes('schedule')) {
+                addLog('星期設定已變更，重新啟動排程提醒', 'info');
+                restartScheduleReminder();
+            }
+        }
+        
+        // 新增月份日期
+        function addMonthDay() {
+            const input = document.getElementById('monthDayInput');
+            const day = input.value.trim();
+            
+            if (!day || day < 1 || day > 31) {
+                addLog('請輸入有效的日期（1-31）', 'error');
+                return;
+            }
+            
+            if (selectedMonthDays.includes(day)) {
+                addLog('該日期已存在', 'error');
+                return;
+            }
+            
+            selectedMonthDays.push(day);
+            selectedMonthDays.sort((a, b) => parseInt(a) - parseInt(b));
+            
+            input.value = '';
+            updateSelectedDaysDisplay();
+            addLog(`設定已更新：新增日期 ${day}號`, 'info');
+            saveSettings();
+            
+            // 如果排程提醒正在運行，重新啟動
+            if (reminderState === 'running' && selectedModes.includes('schedule')) {
+                addLog('日期設定已變更，重新啟動排程提醒', 'info');
+                restartScheduleReminder();
+            }
+        }
+        
+        // 移除月份日期
+        function removeMonthDay(day) {
+            selectedMonthDays = selectedMonthDays.filter(d => d !== day);
+            updateSelectedDaysDisplay();
+            addLog(`設定已更新：移除日期 ${day}號`, 'info');
+            saveSettings();
+            
+            // 如果排程提醒正在運行，重新啟動
+            if (reminderState === 'running' && selectedModes.includes('schedule')) {
+                addLog('日期設定已變更，重新啟動排程提醒', 'info');
+                restartScheduleReminder();
+            }
+        }
+        
+        // 更新選中日期顯示
+        function updateSelectedDaysDisplay() {
+            const container = document.getElementById('selectedDaysDisplay');
+            
+            if (selectedMonthDays.length === 0) {
+                container.innerHTML = '<div style="color: #666; font-size: 12px; text-align: center; padding: 10px;">尚未選擇日期</div>';
+                return;
+            }
+            
+            container.innerHTML = selectedMonthDays.map(day => `
+                <div class="day-tag">
+                    <span>${day}號</span>
+                    <span class="remove-day" onclick="removeMonthDay('${day}')">×</span>
+                </div>
+            `).join('');
+        }
+        
+        // 獲取星期名稱
+        function getWeekdayNames(weekdays) {
+            const names = {
+                '0': '日',
+                '1': '一',
+                '2': '二', 
+                '3': '三',
+                '4': '四',
+                '5': '五',
+                '6': '六'
+            };
+            return '星期' + weekdays.map(day => names[day]).join('、');
+        }
+        
+        // 檢查當前時間是否在排程時間範圍內
+        function isInScheduleTimeRange(logResult = false) {
+            if (!selectedModes.includes('schedule')) {
+                return false;
+            }
+            
+            const scheduleType = document.getElementById('scheduleType').value;
+            const scheduleStartTime = document.getElementById('scheduleStartTime').value;
+            const scheduleEndTime = document.getElementById('scheduleEndTime').value;
+            
+            const now = new Date();
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            
+            const [startHours, startMinutes] = scheduleStartTime.split(':').map(Number);
+            const [endHours, endMinutes] = scheduleEndTime.split(':').map(Number);
+            const startTime = startHours * 60 + startMinutes;
+            const endTime = endHours * 60 + endMinutes;
+            
+            // 檢查是否在時間範圍內
+            let inTimeRange = false;
+            if (endTime >= startTime) {
+                // 正常情況（不跨日）
+                inTimeRange = currentTime >= startTime && currentTime <= endTime;
+            } else {
+                // 跨日情況（例如晚上10點到隔天早上6點）
+                inTimeRange = currentTime >= startTime || currentTime <= endTime;
+            }
+            
+            if (!inTimeRange) {
+                if (logResult) {
+                    addLog('間隔提醒被暫停：不在排程時間範圍內', 'info');
+                }
+                return false;
+            }
+            
+            // 檢查是否符合日期條件
+            let matchesDateCondition = false;
+            if (scheduleType === 'daily') {
+                matchesDateCondition = true;
+            } else if (scheduleType === 'weekly') {
+                const currentWeekday = now.getDay().toString();
+                matchesDateCondition = selectedWeekdays.includes(currentWeekday);
+            } else if (scheduleType === 'monthly') {
+                const currentMonthDay = now.getDate().toString();
+                matchesDateCondition = selectedMonthDays.includes(currentMonthDay);
+            }
+            
+            if (!matchesDateCondition && logResult) {
+                addLog('間隔提醒被暫停：不符合排程日期條件', 'info');
+            }
+            
+            return matchesDateCondition;
+        }
+        
+        // 更新星期複選框狀態
+        function updateWeekdayCheckboxes() {
+            const checkboxes = document.querySelectorAll('#weeklyConfig input[type="checkbox"]');
+            checkboxes.forEach(cb => {
+                cb.checked = selectedWeekdays.includes(cb.value);
+            });
+        }
+        
+
+        // 添加音檔
+        function addAudioFile() {
+            const fileInput = document.getElementById('audioFileInput');
+            if (fileInput.files.length === 0) {
+                addLog('請先選擇音檔', 'error');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            
+            // 檢查是否已存在
+            if (audioFilesList.some(item => item.name === file.name && item.size === file.size)) {
+                addLog('此音檔已存在於列表中', 'error');
+                return;
+            }
+            
+            // 添加到列表
+            const fileInfo = {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                id: Date.now()
+            };
+            
+            audioFilesList.push(fileInfo);
+            selectedAudioFiles.push(file);
+            
+            // 清空輸入框
+            fileInput.value = '';
+            
+            // 更新顯示
+            renderAudioFilesList();
+            saveSettings();
+            addLog(`已添加音檔：${file.name}`);
+        }
+
+        // 渲染音檔列表
+        function renderAudioFilesList() {
+            const container = document.getElementById('audioFilesList');
+            
+            if (audioFilesList.length === 0) {
+                container.innerHTML = '<div class="empty-list">尚未添加任何音檔</div>';
+                return;
+            }
+            
+            container.innerHTML = audioFilesList.map((file, index) => `
+                <div class="file-item">
+                    <span class="file-name">🎵 ${file.name}</span>
+                    <button class="remove-btn" onclick="removeAudioFile(${index})" title="移除">×</button>
+                </div>
+            `).join('');
+        }
+
+        // 移除音檔
+        function removeAudioFile(index) {
+            const fileName = audioFilesList[index].name;
+            audioFilesList.splice(index, 1);
+            selectedAudioFiles.splice(index, 1);
+            
+            renderAudioFilesList();
+            saveSettings();
+            addLog(`已移除音檔：${fileName}`);
+        }
+
+
+        // 更新排程配置
+        function updateScheduleConfig() {
+            const type = document.getElementById('scheduleType').value;
+            const weeklyConfig = document.getElementById('weeklyConfig');
+            const monthlyConfig = document.getElementById('monthlyConfig');
+            
+            if (type === 'weekly') {
+                weeklyConfig.style.display = 'block';
+                monthlyConfig.style.display = 'none';
+            } else if (type === 'monthly') {
+                weeklyConfig.style.display = 'none';
+                monthlyConfig.style.display = 'block';
+            } else {
+                weeklyConfig.style.display = 'none';
+                monthlyConfig.style.display = 'none';
+            }
+            
+            // 此函數僅操作 UI，實際值的變更由 handleSettingChange 處理
+        }
+
+        // 更新語音配置
+        function updateVoiceConfig() {
+            const type = document.getElementById('voiceType').value;
+            const ttsConfig = document.getElementById('ttsConfig');
+            const fileConfig = document.getElementById('fileConfig');
+            
+            if (type === 'tts') {
+                ttsConfig.style.display = 'block';
+                fileConfig.style.display = 'none';
+            } else {
+                ttsConfig.style.display = 'none';
+                fileConfig.style.display = 'block';
+            }
+            
+            // 此函數僅操作 UI，實際值的變更由 handleSettingChange 處理
+        }
+
+        // 啟動提醒
+        function startReminder() {
+            console.log('startReminder called, current state:', reminderState);
+            
+            if (reminderState === 'paused') {
+                resumeReminder();
+                return;
+            }
+            
+            const name = document.getElementById('reminderName').value || '提醒';
+            
+            reminderState = 'running';
+            reminderStartTime = Date.now();
+            console.log('Setting reminderState to running');
+            
+            // 啟動所有選中的模式
+            console.log('selectedModes:', selectedModes);
+            selectedModes.forEach(mode => {
+                console.log('Starting mode:', mode);
+                if (mode === 'interval') {
+                    startIntervalReminder();
+                } else if (mode === 'schedule') {
+                    startScheduleReminder();
+                }
+            });
+            
+            if (selectedModes.length === 0) {
+                console.error('No modes selected!');
+                addLog('錯誤：沒有選擇任何提醒模式', 'error');
+                return;
+            }
+            
+            // 啟動UI狀態更新計時器
+            uiUpdateTimerId = setInterval(updateUI, 30000); // 每30秒更新一次UI狀態
+            updateUI();
+            
+            addLog(`開始執行提醒：${name}`, 'success');
+        }
+
+        // 暫停提醒
+        function pauseReminder() {
+            reminderState = 'paused';
+            pausedTime = Date.now();
+            
+            // 清除所有計時器
+            if (intervalTimerId) {
+                clearInterval(intervalTimerId);
+                intervalTimerId = null;
+            }
+            if (scheduleTimerId) {
+                clearInterval(scheduleTimerId);
+                scheduleTimerId = null;
+            }
+            if (uiUpdateTimerId) {
+                clearInterval(uiUpdateTimerId);
+                uiUpdateTimerId = null;
+            }
+            
+            stopCurrentAudio();
+            updateUI();
+            addLog('提醒已暫停', 'success');
+        }
+
+        // 恢復提醒
+        function resumeReminder() {
+            reminderState = 'running';
+            updateUI();
+            
+            // 恢復所有選中的模式
+            selectedModes.forEach(mode => {
+                if (mode === 'interval') {
+                    startIntervalReminder();
+                } else if (mode === 'schedule') {
+                    startScheduleReminder();
+                }
+            });
+            
+            addLog('提醒已恢復', 'success');
+        }
+
+        // 停止提醒
+        function stopReminder() {
+            reminderState = 'stopped';
+            
+            // 清除所有計時器
+            if (intervalTimerId) {
+                clearInterval(intervalTimerId);
+                intervalTimerId = null;
+            }
+            if (scheduleTimerId) {
+                clearInterval(scheduleTimerId);
+                scheduleTimerId = null;
+            }
+            if (uiUpdateTimerId) {
+                clearInterval(uiUpdateTimerId);
+                uiUpdateTimerId = null;
+            }
+            
+            stopCurrentAudio();
+            updateUI();
+            addLog('提醒已停止', 'success');
+        }
+
+        // 測試提醒
+        function testReminder() {
+            addLog('執行測試提醒...', 'success');
+            
+            // 檢查選中的動作
+            addLog(`選中的動作：${selectedActions.join(', ')}`, 'info');
+            
+            // 顯示當前間隔設定
+            const currentValue = parseInt(document.getElementById('intervalValue').value);
+            const currentUnit = document.getElementById('intervalUnit').value;
+            const currentMilliseconds = getIntervalInMs(currentValue, currentUnit);
+            addLog(`當前間隔設定：每 ${currentValue} ${getUnitName(currentUnit)} (${currentMilliseconds}ms)`, 'info');
+            
+            // 如果同時啟用了排程提醒，檢查時間範圍
+            if (selectedModes.includes('schedule')) {
+                if (isInScheduleTimeRange(true)) {
+                    executeReminder();
+                } else {
+                    addLog('測試提醒被暫停：不在排程時間範圍內', 'error');
+                }
+            } else {
+                executeReminder();
+            }
+        }
+
+        // 間隔提醒
+        function startIntervalReminder() {
+            const value = parseInt(document.getElementById('intervalValue').value);
+            const unit = document.getElementById('intervalUnit').value;
+            
+            let milliseconds = getIntervalInMs(value, unit);
+            lastIntervalExecution = Date.now();
+            
+            // 日誌記錄詳細設定
+            console.log('startIntervalReminder:', { value, unit, milliseconds });
+            addLog(`讀取間隔設定：${value} ${getUnitName(unit)} = ${milliseconds}ms`, 'info');
+            
+            // 如果同時啟用了排程提醒，使用較小的檢查間隔以確保時間範圍檢查準確
+            // 但不能小於 1 分鐘，避免過度頻繁的檢查
+            const checkInterval = selectedModes.includes('schedule') ? 
+                Math.min(milliseconds, 60000) : milliseconds;
+            
+            console.log('checkInterval:', checkInterval);
+            addLog(`實際檢查間隔：${checkInterval}ms`, 'info');
+            
+            intervalTimerId = setInterval(() => {
+                if (reminderState === 'running') {
+                    const now = Date.now();
+                    
+                    // 如果同時啟用了排程提醒，則只在排程時間範圍內執行間隔提醒
+                    if (selectedModes.includes('schedule')) {
+                        // 動態讀取最新的間隔設定
+                        const currentValue = parseInt(document.getElementById('intervalValue').value);
+                        const currentUnit = document.getElementById('intervalUnit').value;
+                        const currentMilliseconds = getIntervalInMs(currentValue, currentUnit);
+                        
+                        // 檢查是否在排程時間範圍內且達到間隔時間
+                        if (isInScheduleTimeRange() && (now - lastIntervalExecution) >= currentMilliseconds) {
+                            console.log('Executing reminder with current settings:', { currentValue, currentUnit, currentMilliseconds });
+                            executeReminder();
+                            lastIntervalExecution = now;
+                        }
+                    } else {
+                        // 只有間隔提醒時，正常執行
+                        executeReminder();
+                        lastIntervalExecution = now;
+                    }
+                }
+            }, checkInterval);
+            
+            const scheduleNote = selectedModes.includes('schedule') ? '（僅在排程時間範圍內執行）' : '';
+            addLog(`間隔提醒已設定：每 ${value} ${getUnitName(unit)}${scheduleNote}`);
+        }
+
+        // 計算間隔毫秒數
+        function getIntervalInMs(value, unit) {
+            const multipliers = {
+                'minutes': 60 * 1000,
+                'hours': 60 * 60 * 1000,
+                'days': 24 * 60 * 60 * 1000,
+                'weeks': 7 * 24 * 60 * 60 * 1000,
+                'months': 30 * 24 * 60 * 60 * 1000 // 近似30天
+            };
+            
+            return value * (multipliers[unit] || 60000); // 預設分鐘
+        }
+
+        // 排程提醒
+        function startScheduleReminder() {
+            const checkSchedule = () => {
+                if (reminderState !== 'running') return;
+                
+                // 使用統一的時間範圍檢查函數
+                if (isInScheduleTimeRange()) {
+                    executeReminder();
+                }
+            };
+            
+            // 每分鐘檢查一次
+            scheduleTimerId = setInterval(checkSchedule, 60000);
+            
+            addLog(`排程提醒已設定：${getScheduleDescription()}`);
+        }
+
+        // 執行提醒
+        function executeReminder() {
+            addLog('執行提醒動作...', 'success');
+            
+            // 執行所有選中的動作
+            selectedActions.forEach(action => {
+                if (action === 'voice') {
+                    executeVoiceReminder();
+                } else if (action === 'link') {
+                    executeLinkReminder();
+                }
+            });
+        }
+
+        // 語音提醒
+        function executeVoiceReminder() {
+            const voiceType = document.getElementById('voiceType').value;
+            
+            if (voiceType === 'tts') {
+                const texts = document.getElementById('ttsTexts').value.split('\n').filter(t => t.trim());
+                if (texts.length === 0) {
+                    addLog('沒有設定提示文字', 'error');
+                    return;
+                }
+                
+                // 檢查瀏覽器是否支援語音合成API
+                if (!('speechSynthesis' in window)) {
+                    addLog('瀏覽器不支援語音合成功能', 'error');
+                    return;
+                }
+                
+                const randomText = texts[Math.floor(Math.random() * texts.length)];
+                speakText(randomText);
+                addLog(`語音提醒：${randomText}`);
+            } else {
+                if (selectedAudioFiles.length === 0) {
+                    if (audioFilesList.length > 0) {
+                        addLog('需要重新選擇音檔文件（頁面重新載入後需要重新選擇）', 'error');
+                    } else {
+                        addLog('沒有選擇音檔', 'error');
+                    }
+                    return;
+                }
+                
+                const randomFile = selectedAudioFiles[Math.floor(Math.random() * selectedAudioFiles.length)];
+                playAudioFile(randomFile);
+                addLog(`播放音檔：${randomFile.name}（從${selectedAudioFiles.length}個音檔中隨機選擇）`);
+            }
+        }
+
+        // 連結提醒
+        function executeLinkReminder() {
+            const urls = document.getElementById('linkUrls').value.split('\n').filter(u => u.trim());
+            if (urls.length === 0) {
+                addLog('沒有設定網址', 'error');
+                return;
+            }
+            
+            const randomUrl = urls[Math.floor(Math.random() * urls.length)];
+            window.open(randomUrl, '_blank');
+            addLog(`開啟連結：${randomUrl}`);
+        }
+
+
+        // 文字轉語音 - 連續重複播放
+        function speakText(text) {
+            console.log('speakText called with:', text);
+            addLog(`開始語音播放：${text}`, 'info');
+            
+            stopCurrentAudio();
+            
+            const duration = getDurationInMs();
+            console.log('Duration:', duration);
+            voicePlaybackState.isPlaying = true;
+            voicePlaybackState.startTime = Date.now();
+            voicePlaybackState.duration = duration;
+            
+            const playVoice = () => {
+                if (!voicePlaybackState.isPlaying) return;
+                
+                const elapsed = Date.now() - voicePlaybackState.startTime;
+                if (elapsed >= duration) {
+                    stopCurrentAudio();
+                    return;
+                }
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                
+                utterance.onstart = () => {
+                    console.log('Speech started');
+                    addLog(`語音播放開始：${text}`, 'success');
+                };
+                
+                utterance.onend = () => {
+                    console.log('Speech ended');
+                    addLog(`語音播放結束：${text}`, 'success');
+                    if (voicePlaybackState.isPlaying && Date.now() - voicePlaybackState.startTime < duration) {
+                        // 短暫停頓後繼續播放
+                        setTimeout(playVoice, 200);
+                    }
+                };
+                
+                utterance.onerror = (error) => {
+                    console.error('Speech error:', error);
+                    addLog(`語音播放錯誤：${error.error}`, 'error');
+                };
+                
+                console.log('Calling speechSynthesis.speak');
+                speechSynthesis.speak(utterance);
+            };
+            
+            playVoice();
+            
+            // 設定總播放時長限制
+            timeoutId = setTimeout(() => {
+                stopCurrentAudio();
+            }, duration);
+        }
+
+        // 播放音檔 - 連續重複播放
+        function playAudioFile(file) {
+            stopCurrentAudio();
+            
+            const url = URL.createObjectURL(file);
+            const duration = getDurationInMs();
+            voicePlaybackState.isPlaying = true;
+            voicePlaybackState.startTime = Date.now();
+            voicePlaybackState.duration = duration;
+            
+            const playAudio = () => {
+                if (!voicePlaybackState.isPlaying) return;
+                
+                const elapsed = Date.now() - voicePlaybackState.startTime;
+                if (elapsed >= duration) {
+                    stopCurrentAudio();
+                    URL.revokeObjectURL(url);
+                    return;
+                }
+                
+                currentAudio = new Audio(url);
+                currentAudio.onended = () => {
+                    if (voicePlaybackState.isPlaying && Date.now() - voicePlaybackState.startTime < duration) {
+                        // 短暫停頓後繼續播放
+                        setTimeout(playAudio, 200);
+                    }
+                };
+                
+                currentAudio.onerror = (error) => {
+                    addLog(`音檔載入錯誤：${error.message || '未知錯誤'}`, 'error');
+                };
+                
+                currentAudio.play().catch(error => {
+                    addLog(`音檔播放錯誤：${error.message}`, 'error');
+                    console.log('Audio play error:', error);
+                });
+            };
+            
+            playAudio();
+            
+            // 設定總播放時長限制
+            timeoutId = setTimeout(() => {
+                stopCurrentAudio();
+                URL.revokeObjectURL(url);
+            }, duration);
+        }
+
+        // 停止當前音訊
+        function stopCurrentAudio() {
+            voicePlaybackState.isPlaying = false;
+            
+            if (currentAudio) {
+                try {
+                    // 只有在音檔可以暫停時才暫停
+                    if (currentAudio.readyState >= 2) { // HAVE_CURRENT_DATA
+                        currentAudio.pause();
+                    }
+                } catch (error) {
+                    console.log('Stop audio error (可忽略):', error.message);
+                }
+                currentAudio = null;
+            }
+            
+            try {
+                speechSynthesis.cancel();
+            } catch (error) {
+                console.log('Stop speech synthesis error (可忽略):', error.message);
+            }
+            
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+            
+            if (voicePlaybackState.intervalId) {
+                clearInterval(voicePlaybackState.intervalId);
+                voicePlaybackState.intervalId = null;
+            }
+        }
+
+        // 獲取播放時長（毫秒）
+        function getDurationInMs() {
+            const value = parseInt(document.getElementById('durationValue').value);
+            const unit = document.getElementById('durationUnit').value;
+            
+            const multipliers = {
+                'seconds': 1000,
+                'minutes': 60 * 1000,
+                'hours': 60 * 60 * 1000
+            };
+            
+            return value * (multipliers[unit] || 1000); // 預設秒
+        }
+
+        // 更新UI狀態
+        function updateUI() {
+            const startBtn = document.getElementById('startBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            
+            // 確保按鈕元素存在
+            if (!startBtn || !pauseBtn || !stopBtn) {
+                console.error('無法找到按鈕元素');
+                return;
+            }
+            
+            console.log('updateUI called, reminderState:', reminderState);
+            
+            // 獲取或創建狀態指示器
+            let indicator = startBtn.querySelector('.status-indicator');
+            if (!indicator) {
+                indicator = document.createElement('span');
+                indicator.className = 'status-indicator';
+                startBtn.insertBefore(indicator, startBtn.firstChild);
+            }
+            
+            // 更新按鈕狀態
+            if (reminderState === 'stopped') {
+                indicator.className = 'status-indicator status-stopped';
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+                stopBtn.disabled = true;
+                console.log('UI set to stopped state, startBtn.disabled:', startBtn.disabled);
+            } else if (reminderState === 'running') {
+                indicator.className = 'status-indicator status-running';
+                startBtn.disabled = true;
+                pauseBtn.disabled = false;
+                stopBtn.disabled = false;
+            } else if (reminderState === 'paused') {
+                indicator.className = 'status-indicator status-paused';
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+                stopBtn.disabled = false;
+            }
+            
+            console.log('Button states after update:', {
+                startBtn: { disabled: startBtn.disabled, onclick: !!startBtn.onclick },
+                pauseBtn: { disabled: pauseBtn.disabled, onclick: !!pauseBtn.onclick },
+                stopBtn: { disabled: stopBtn.disabled, onclick: !!stopBtn.onclick }
+            });
+        }
+
+        // 添加日誌
+        function addLog(message, type = 'info') {
+            const logArea = document.getElementById('logArea');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            logArea.appendChild(logEntry);
+            logArea.scrollTop = logArea.scrollHeight;
+            
+            // 保持最多100條記錄
+            while (logArea.children.length > 100) {
+                logArea.removeChild(logArea.firstChild);
+            }
+        }
+
+        // 輔助函數
+        function getActionName(action) {
+            const names = {
+                'voice': '語音提醒',
+                'link': '開啟連結'
+            };
+            return names[action] || action;
+        }
+
+        function getUnitName(unit) {
+            const names = {
+                'seconds': '秒',
+                'minutes': '分鐘',
+                'hours': '小時',
+                'days': '天',
+                'weeks': '週',
+                'months': '月'
+            };
+            return names[unit] || unit;
+        }
+
+        function getScheduleDescription() {
+            const scheduleType = document.getElementById('scheduleType').value;
+            const scheduleStartTime = document.getElementById('scheduleStartTime').value;
+            const scheduleEndTime = document.getElementById('scheduleEndTime').value;
+            const timeRange = `${scheduleStartTime}-${scheduleEndTime}`;
+            
+            if (scheduleType === 'daily') {
+                return `每天 ${timeRange}`;
+            } else if (scheduleType === 'weekly') {
+                const weekDayNames = getWeekdayNames(selectedWeekdays);
+                return `每週${weekDayNames} ${timeRange}`;
+            } else if (scheduleType === 'monthly') {
+                const monthDayNames = selectedMonthDays.join('、') + '號';
+                return `每月${monthDayNames} ${timeRange}`;
+            }
+        }
+
+
+        // 為所有輸入框添加自動保存和即時更新
+        function initializeAutoSave() {
+            const inputs = document.querySelectorAll('input, select, textarea');
+            console.log('Found inputs for auto-save:', inputs.length);
+            inputs.forEach((input, index) => {
+                console.log(`Input ${index}: id=${input.id}, type=${input.type || input.tagName}`);
+                input.addEventListener('change', handleSettingChange);
+                input.addEventListener('input', handleSettingChange);
+            });
+            
+        }
+        
+        // 處理設定變更
+        function handleSettingChange(event) {
+            const element = event.target;
+            const fieldName = element.id || element.name;
+            const oldValue = element.dataset.oldValue || '';
+            const newValue = element.type === 'checkbox' ? element.checked : element.value;
+            
+            console.log('handleSettingChange:', { 
+                fieldName, 
+                oldValue, 
+                newValue, 
+                reminderState,
+                elementId: element.id,
+                elementTagName: element.tagName
+            });
+            
+            // 如果沒有fieldName，跳過處理
+            if (!fieldName) {
+                console.log('No fieldName found, skipping');
+                return;
+            }
+            
+            // 記錄設定變更
+            if (oldValue !== newValue.toString()) {
+                const fieldDisplayName = getFieldDisplayName(fieldName);
+                addLog(`設定已更新：${fieldDisplayName} = ${formatValue(newValue)}`, 'info');
+                
+                // 更新舊值
+                element.dataset.oldValue = newValue.toString();
+            }
+            
+            // 保存設定
+            saveSettings();
+            
+            // 如果是關鍵設定且提醒正在運行，重新啟動相關提醒
+            if (reminderState === 'running') {
+                console.log('Reminder is running, checking if restart needed for field:', fieldName);
+                restartActiveReminders(fieldName);
+            }
+        }
+        
+        // 重新啟動相關的提醒
+        function restartActiveReminders(changedField) {
+            const intervalRelatedFields = ['intervalValue', 'intervalUnit'];
+            const scheduleRelatedFields = ['scheduleType', 'scheduleStartTime', 'scheduleEndTime'];
+            
+            console.log('restartActiveReminders:', { 
+                changedField, 
+                intervalRelatedFields, 
+                scheduleRelatedFields, 
+                selectedModes 
+            });
+            
+            if (intervalRelatedFields.includes(changedField) && selectedModes.includes('interval')) {
+                addLog('間隔設定已變更，重新啟動間隔提醒', 'info');
+                restartIntervalReminder();
+            }
+            
+            if (scheduleRelatedFields.includes(changedField) && selectedModes.includes('schedule')) {
+                addLog('排程設定已變更，重新啟動排程提醒', 'info');
+                restartScheduleReminder();
+            }
+        }
+        
+        // 重新啟動間隔提醒
+        function restartIntervalReminder() {
+            console.log('restartIntervalReminder called');
+            addLog('正在重新啟動間隔提醒...', 'info');
+            
+            // 停止現有的間隔提醒
+            if (intervalTimerId) {
+                clearInterval(intervalTimerId);
+                intervalTimerId = null;
+                addLog('已停止舊的間隔提醒', 'info');
+            }
+            
+            // 重置最後執行時間，確保新設定立即生效
+            lastIntervalExecution = 0;
+            
+            // 重新啟動間隔提醒
+            if (selectedModes.includes('interval')) {
+                addLog('使用新設定啟動間隔提醒', 'info');
+                startIntervalReminder();
+            } else {
+                addLog('間隔模式未啟用，不啟動間隔提醒', 'info');
+            }
+        }
+        
+        // 重新啟動排程提醒
+        function restartScheduleReminder() {
+            // 停止現有的排程提醒
+            if (scheduleTimerId) {
+                clearInterval(scheduleTimerId);
+                scheduleTimerId = null;
+            }
+            
+            // 重新啟動排程提醒
+            if (selectedModes.includes('schedule')) {
+                startScheduleReminder();
+            }
+        }
+        
+        // 獲取欄位顯示名稱
+        function getFieldDisplayName(fieldName) {
+            const fieldNames = {
+                'intervalValue': '間隔數值',
+                'intervalUnit': '間隔單位',
+                'scheduleType': '排程類型',
+                'scheduleStartTime': '排程開始時間',
+                'scheduleEndTime': '排程結束時間',
+                'reminderName': '提醒名稱',
+                'voiceType': '語音類型',
+                'ttsTexts': '提示文字',
+                'linkUrls': '連結清單',
+                'durationValue': '播放時長數值',
+                'durationUnit': '播放時長單位',
+                'isRepeating': '重複執行',
+                'monthDayInput': '月份日期輸入'
+            };
+            return fieldNames[fieldName] || fieldName;
+        }
+        
+        // 格式化值顯示
+        function formatValue(value) {
+            if (typeof value === 'boolean') {
+                return value ? '是' : '否';
+            }
+            if (typeof value === 'string' && value.includes('\n')) {
+                return `多行內容（${value.split('\n').length}行）`;
+            }
+            return value;
+        }
+        
+        // 初始化欄位舊值
+        function initializeFieldOldValues() {
+            const inputs = document.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                const value = input.type === 'checkbox' ? input.checked : input.value;
+                input.dataset.oldValue = value.toString();
+            });
+        }
+
+        // 頁面載入時初始化
+        window.addEventListener('load', function() {
+            console.log('Page loaded, initializing...');
+            
+            loadSettings(); // 載入保存的設定
+            initializeAutoSave();
+            initializeFieldOldValues(); // 初始化欄位舊值
+            
+            // 檢查按鈕是否已經有 onclick 事件
+            const startBtn = document.getElementById('startBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            
+            console.log('Button onclick events check:', {
+                startBtn: !!startBtn.onclick,
+                pauseBtn: !!pauseBtn.onclick,
+                stopBtn: !!stopBtn.onclick
+            });
+            
+            // 確保在設定事件後再更新UI
+            updateUI();
+            addLog('提醒模組已載入');
+            addLog('✅ 設定變更提示已啟用：變更設定時將立即保存並重新啟動相關提醒', 'info');
+        });
+
+        // 頁面關閉時清理
+        window.addEventListener('beforeunload', function() {
+            stopReminder();
+        });
+    </script>
+</body>
+</html>

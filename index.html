@@ -189,23 +189,146 @@
         }
 
         .reminder-controls {
-            background: #e9ecef;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
         }
 
         .reminder-controls label {
             font-weight: bold;
-            margin-right: 10px;
+            margin-right: 5px;
+            font-size: 11px;
         }
 
         .reminder-controls input,
         .reminder-controls select {
-            padding: 8px;
+            padding: 4px;
             border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-right: 10px;
+            border-radius: 4px;
+            margin-right: 5px;
+            font-size: 11px;
+        }
+
+        .reminder-controls input[type="number"] {
+            width: 50px;
+        }
+
+        .reminder-controls input[type="time"] {
+            width: 80px;
+        }
+
+        .reminder-controls select {
+            width: 80px;
+        }
+
+        .reminder-controls input[type="text"] {
+            width: 200px;
+        }
+
+        .reminder-controls textarea {
+            width: 200px;
+            height: 50px;
+            resize: vertical;
+            padding: 4px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .reminder-row {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            margin-bottom: 5px;
+            flex-wrap: wrap;
+        }
+
+        .reminder-row-full {
+            display: flex;
+            align-items: flex-start;
+            gap: 3px;
+            margin-bottom: 5px;
+            width: 100%;
+        }
+
+        .delete-btn-small {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 8px;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-btn-small:hover {
+            background: #c82333;
+        }
+
+        .habit-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+        }
+
+        .habit-name:hover {
+            color: #007bff;
+        }
+
+        .voice-controls {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            margin-left: 5px;
+        }
+
+        .voice-control-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            width: 20px;
+            height: 20px;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .voice-control-btn:hover {
+            background: #218838;
+        }
+
+        .voice-control-btn.pause {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .voice-control-btn.pause:hover {
+            background: #e0a800;
+        }
+
+        .voice-control-btn.stop {
+            background: #dc3545;
+        }
+
+        .voice-control-btn.stop:hover {
+            background: #c82333;
+        }
+
+        .voice-control-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
         }
 
         .export-import {
@@ -349,6 +472,39 @@
         function saveData() {
             localStorage.setItem('habits', JSON.stringify(habits));
             localStorage.setItem('reminders', JSON.stringify(reminders));
+            localStorage.setItem('lastSave', new Date().toISOString());
+            
+            // 自動同步到雲端（如果已設定）
+            autoSyncToCloud();
+        }
+
+        function autoSyncToCloud() {
+            const config = JSON.parse(localStorage.getItem('googleSheetsConfig') || '{}');
+            if (config.sheetId && config.serviceAccount) {
+                // 這裡可以加入實際的雲端同步邏輯
+                console.log('自動同步到雲端...');
+            }
+        }
+
+        function loadData() {
+            const savedHabits = localStorage.getItem('habits');
+            const savedReminders = localStorage.getItem('reminders');
+            
+            if (savedHabits) {
+                habits = JSON.parse(savedHabits);
+                // 確保每個習慣都有必要的屬性
+                habits.forEach(habit => {
+                    if (!habit.completions) habit.completions = [];
+                    if (!habit.totalCompleted) habit.totalCompleted = 0;
+                    if (!habit.currentStreak) habit.currentStreak = 0;
+                    if (!habit.created) habit.created = new Date().toISOString();
+                    updateStreak(habit);
+                });
+            }
+            
+            if (savedReminders) {
+                reminders = JSON.parse(savedReminders);
+            }
         }
 
         function addHabit() {
@@ -385,19 +541,71 @@
             }
         }
 
-        function completeHabit(id) {
+        function addHabitCompletion(id) {
             const habit = habits.find(h => h.id === id);
             const today = new Date().toDateString();
             
-            if (!habit.completions.includes(today)) {
-                habit.completions.push(today);
+            if (!habit.dailyCompletions) habit.dailyCompletions = {};
+            if (!habit.dailyCompletions[today]) habit.dailyCompletions[today] = 0;
+            
+            const dailyTarget = habit.dailyTarget || 1;
+            
+            if (habit.dailyCompletions[today] < dailyTarget) {
+                habit.dailyCompletions[today]++;
                 habit.totalCompleted++;
+                
+                // 如果今天還沒有記錄，加入到完成日期
+                if (!habit.completions.includes(today)) {
+                    habit.completions.push(today);
+                }
+                
                 updateStreak(habit);
-                saveData();
-                renderHabits();
-                updateStats();
-                showNotification(`完成了「${habit.name}」！`);
+                showNotification(`完成了「${habit.name}」！今日進度：${habit.dailyCompletions[today]}/${dailyTarget}`);
+            } else {
+                showNotification(`今日「${habit.name}」已達成目標！`);
             }
+            
+            saveData();
+            renderHabits();
+            updateStats();
+        }
+
+        function removeHabitCompletion(id) {
+            const habit = habits.find(h => h.id === id);
+            const today = new Date().toDateString();
+            
+            if (!habit.dailyCompletions) habit.dailyCompletions = {};
+            if (!habit.dailyCompletions[today]) habit.dailyCompletions[today] = 0;
+            
+            if (habit.dailyCompletions[today] > 0) {
+                habit.dailyCompletions[today]--;
+                habit.totalCompleted--;
+                
+                // 如果今天的完成次數變成0，從完成日期中移除
+                if (habit.dailyCompletions[today] === 0) {
+                    const index = habit.completions.indexOf(today);
+                    if (index > -1) {
+                        habit.completions.splice(index, 1);
+                    }
+                }
+                
+                updateStreak(habit);
+                showNotification(`復原了「${habit.name}」的一次完成`);
+            } else {
+                showNotification(`今日「${habit.name}」沒有完成記錄可復原`);
+            }
+            
+            saveData();
+            renderHabits();
+            updateStats();
+        }
+
+        function setDailyTarget(id, target) {
+            const habit = habits.find(h => h.id === id);
+            habit.dailyTarget = parseInt(target) || 1;
+            saveData();
+            renderHabits();
+            showNotification(`「${habit.name}」的每日目標設定為 ${habit.dailyTarget} 次`);
         }
 
         function updateStreak(habit) {
@@ -429,19 +637,25 @@
             habitsList.innerHTML = '';
             
             habits.forEach(habit => {
+                const today = new Date().toDateString();
+                const todayCount = (habit.dailyCompletions && habit.dailyCompletions[today]) || 0;
+                const dailyTarget = habit.dailyTarget || 1;
                 const isCompleted = isCompletedToday(habit);
                 const completionRate = habit.totalCompleted > 0 ? Math.round((habit.totalCompleted / Math.max(1, getDaysSinceCreation(habit))) * 100) : 0;
                 
                 habitsList.innerHTML += `
                     <div class="habit-item">
                         <div class="habit-header">
-                            <div class="habit-name">${habit.name}</div>
+                            <div class="habit-name" ondblclick="editHabitInline(${habit.id})" id="habitName_${habit.id}">${habit.name}</div>
                             <div class="habit-controls">
-                                <button class="habit-button check-btn" onclick="completeHabit(${habit.id})" ${isCompleted ? 'disabled' : ''}>
-                                    ${isCompleted ? '✅ 已完成' : '☑️ 完成'}
+                                <button class="habit-button check-btn" onclick="addHabitCompletion(${habit.id})" id="checkBtn_${habit.id}">
+                                    ➕ 完成
                                 </button>
-                                <button class="habit-button edit-btn" onclick="editHabit(${habit.id})">✏️ 編輯</button>
-                                <button class="habit-button delete-btn" onclick="deleteHabit(${habit.id})">🗑️ 刪除</button>
+                                <button class="habit-button" onclick="removeHabitCompletion(${habit.id})" style="background: #ffc107; color: #333;">
+                                    ➖ 復原
+                                </button>
+                                <span>今日: <span id="todayCount_${habit.id}">0</span>/<input type="number" min="1" max="20" value="${habit.dailyTarget || 1}" onchange="setDailyTarget(${habit.id}, this.value)" style="width: 30px; font-size: 12px; padding: 2px;"></span>
+                                <button class="delete-btn-small" onclick="deleteHabit(${habit.id})" title="刪除習慣">×</button>
                             </div>
                         </div>
                         <div class="habit-info">
@@ -453,17 +667,129 @@
                             <div class="progress-fill" style="width: ${completionRate}%"></div>
                         </div>
                         <div class="reminder-controls">
-                            <label>提醒設定:</label>
-                            <select onchange="setReminderType(${habit.id}, this.value)">
-                                <option value="">選擇提醒類型</option>
-                                <option value="interval">固定間隔</option>
-                                <option value="schedule">指定時間</option>
-                            </select>
-                            <input type="number" placeholder="間隔(分鐘)" onchange="setReminderInterval(${habit.id}, this.value)">
-                            <input type="time" onchange="setReminderTime(${habit.id}, this.value)">
+                            <div class="reminder-row">
+                                <label>提醒:</label>
+                                <select onchange="setReminderType(${habit.id}, this.value)" id="reminderType_${habit.id}">
+                                    <option value="">選擇類型</option>
+                                    <option value="interval">固定間隔</option>
+                                    <option value="schedule">指定時間</option>
+                                </select>
+                                <span id="intervalControls_${habit.id}" style="display:none;">
+                                    <label>間隔:</label>
+                                    <input type="number" min="1" placeholder="數值" onchange="setReminderInterval(${habit.id}, this.value)" id="reminderInterval_${habit.id}">
+                                    <select onchange="setReminderUnit(${habit.id}, this.value)" id="reminderUnit_${habit.id}">
+                                        <option value="minutes">分鐘</option>
+                                        <option value="hours">小時</option>
+                                        <option value="days">天</option>
+                                        <option value="weeks">週</option>
+                                        <option value="months">月</option>
+                                    </select>
+                                </span>
+                                <span id="scheduleControls_${habit.id}" style="display:none;">
+                                    <label>時間:</label>
+                                    <input type="time" onchange="setReminderTime(${habit.id}, this.value)" id="reminderTime_${habit.id}">
+                                </span>
+                                <label>語音:</label>
+                                <input type="number" min="1" max="999" placeholder="時間" onchange="setVoiceDuration(${habit.id}, this.value)" id="voiceDuration_${habit.id}" value="3">
+                                <select onchange="setVoiceDurationUnit(${habit.id}, this.value)" id="voiceDurationUnit_${habit.id}">
+                                    <option value="seconds">秒</option>
+                                    <option value="minutes">分鐘</option>
+                                    <option value="hours">小時</option>
+                                </select>
+                                <label>後停止</label>
+                                <div class="voice-controls">
+                                    <button class="voice-control-btn" onclick="playVoiceTest(${habit.id})" id="playBtn_${habit.id}" title="播放測試">▶</button>
+                                    <button class="voice-control-btn pause" onclick="pauseVoiceTest(${habit.id})" id="pauseBtn_${habit.id}" title="暫停" disabled>⏸</button>
+                                    <button class="voice-control-btn stop" onclick="stopVoiceTest(${habit.id})" id="stopBtn_${habit.id}" title="停止" disabled>⏹</button>
+                                </div>
+                            </div>
+                            <div class="reminder-row-full">
+                                <label>提示:</label>
+                                <select onchange="setReminderTextType(${habit.id}, this.value)" id="reminderTextType_${habit.id}">
+                                    <option value="default">內建</option>
+                                    <option value="custom">自定義</option>
+                                </select>
+                                <textarea placeholder="自定義提示文字" onchange="setReminderText(${habit.id}, this.value)" id="reminderText_${habit.id}" style="display:none;"></textarea>
+                            </div>
                         </div>
                     </div>
                 `;
+            });
+            
+            // 更新今日完成次數顯示
+            habits.forEach(habit => {
+                const today = new Date().toDateString();
+                const todayCount = (habit.dailyCompletions && habit.dailyCompletions[today]) || 0;
+                const todayCountElement = document.getElementById(`todayCount_${habit.id}`);
+                if (todayCountElement) {
+                    todayCountElement.textContent = todayCount;
+                }
+            });
+            
+            // 恢復提醒設定
+            restoreReminderSettings();
+        }
+
+        function restoreReminderSettings() {
+            habits.forEach(habit => {
+                const reminder = reminders[habit.id];
+                if (reminder) {
+                    const typeSelect = document.getElementById(`reminderType_${habit.id}`);
+                    const intervalInput = document.getElementById(`reminderInterval_${habit.id}`);
+                    const unitSelect = document.getElementById(`reminderUnit_${habit.id}`);
+                    const timeInput = document.getElementById(`reminderTime_${habit.id}`);
+                    const textTypeSelect = document.getElementById(`reminderTextType_${habit.id}`);
+                    const textInput = document.getElementById(`reminderText_${habit.id}`);
+                    const voiceDurationInput = document.getElementById(`voiceDuration_${habit.id}`);
+                    const intervalControls = document.getElementById(`intervalControls_${habit.id}`);
+                    const scheduleControls = document.getElementById(`scheduleControls_${habit.id}`);
+                    
+                    if (typeSelect && reminder.type) {
+                        typeSelect.value = reminder.type;
+                        
+                        if (reminder.type === 'interval') {
+                            intervalControls.style.display = 'inline';
+                            scheduleControls.style.display = 'none';
+                            if (reminder.interval) {
+                                intervalInput.value = reminder.interval;
+                            }
+                            if (reminder.unit) {
+                                unitSelect.value = reminder.unit;
+                            }
+                        } else if (reminder.type === 'schedule') {
+                            intervalControls.style.display = 'none';
+                            scheduleControls.style.display = 'inline';
+                            if (reminder.time) {
+                                timeInput.value = reminder.time;
+                            }
+                        }
+                    }
+                    
+                    // 恢復提示文字設定
+                    if (textTypeSelect && reminder.textType) {
+                        textTypeSelect.value = reminder.textType;
+                        if (reminder.textType === 'custom') {
+                            textInput.style.display = 'block';
+                            if (reminder.customText) {
+                                textInput.value = reminder.customText;
+                            }
+                        }
+                    }
+                    
+                    // 恢復語音播放時間
+                    if (voiceDurationInput && reminder.voiceDuration) {
+                        voiceDurationInput.value = reminder.voiceDuration;
+                    }
+                    
+                    // 恢復語音播放時間單位
+                    const voiceDurationUnitSelect = document.getElementById(`voiceDurationUnit_${habit.id}`);
+                    if (voiceDurationUnitSelect && reminder.voiceDurationUnit) {
+                        voiceDurationUnitSelect.value = reminder.voiceDurationUnit;
+                    }
+                    
+                    // 初始化語音控制按鈕狀態
+                    updateVoiceButtons(habit.id, 'stopped');
+                }
             });
         }
 
@@ -500,12 +826,34 @@
         function setReminderType(habitId, type) {
             if (!reminders[habitId]) reminders[habitId] = {};
             reminders[habitId].type = type;
+            
+            const intervalControls = document.getElementById(`intervalControls_${habitId}`);
+            const scheduleControls = document.getElementById(`scheduleControls_${habitId}`);
+            
+            if (type === 'interval') {
+                intervalControls.style.display = 'inline';
+                scheduleControls.style.display = 'none';
+            } else if (type === 'schedule') {
+                intervalControls.style.display = 'none';
+                scheduleControls.style.display = 'inline';
+            } else {
+                intervalControls.style.display = 'none';
+                scheduleControls.style.display = 'none';
+            }
+            
             saveData();
         }
 
         function setReminderInterval(habitId, interval) {
             if (!reminders[habitId]) reminders[habitId] = {};
             reminders[habitId].interval = parseInt(interval);
+            saveData();
+            startIntervalReminder(habitId);
+        }
+
+        function setReminderUnit(habitId, unit) {
+            if (!reminders[habitId]) reminders[habitId] = {};
+            reminders[habitId].unit = unit;
             saveData();
             startIntervalReminder(habitId);
         }
@@ -517,18 +865,217 @@
             startScheduledReminder(habitId);
         }
 
+        function setReminderTextType(habitId, type) {
+            if (!reminders[habitId]) reminders[habitId] = {};
+            reminders[habitId].textType = type;
+            
+            const textInput = document.getElementById(`reminderText_${habitId}`);
+            if (type === 'custom') {
+                textInput.style.display = 'block';
+            } else {
+                textInput.style.display = 'none';
+            }
+            
+            saveData();
+        }
+
+        function setReminderText(habitId, text) {
+            if (!reminders[habitId]) reminders[habitId] = {};
+            reminders[habitId].customText = text;
+            saveData();
+        }
+
+        function setVoiceDuration(habitId, duration) {
+            if (!reminders[habitId]) reminders[habitId] = {};
+            reminders[habitId].voiceDuration = parseInt(duration) || 3;
+            saveData();
+        }
+
+        function setVoiceDurationUnit(habitId, unit) {
+            if (!reminders[habitId]) reminders[habitId] = {};
+            reminders[habitId].voiceDurationUnit = unit;
+            saveData();
+        }
+
+        // 語音播放管理
+        let voicePlaybackState = {}; // 記錄每個習慣的播放狀態
+
+        function getVoiceDurationInMs(habitId) {
+            const reminder = reminders[habitId];
+            const duration = reminder?.voiceDuration || 3;
+            const unit = reminder?.voiceDurationUnit || 'seconds';
+            
+            switch(unit) {
+                case 'seconds':
+                    return duration * 1000;
+                case 'minutes':
+                    return duration * 60000;
+                case 'hours':
+                    return duration * 3600000;
+                default:
+                    return duration * 1000;
+            }
+        }
+
+        function playVoiceTest(habitId) {
+            const habit = habits.find(h => h.id === habitId);
+            if (!habit) return;
+            
+            // 如果是暫停狀態，則恢復播放
+            if (voicePlaybackState[habitId]?.isPaused) {
+                voicePlaybackState[habitId].isPaused = false;
+                speechSynthesis.resume();
+                updateVoiceButtons(habitId, 'playing');
+                return;
+            }
+            
+            const reminder = reminders[habitId];
+            let reminderText = `提醒：該完成「${habit.name}」了！`;
+            
+            if (reminder?.textType === 'custom' && reminder?.customText) {
+                reminderText = reminder.customText;
+            }
+            
+            startVoicePlayback(habitId, reminderText);
+        }
+
+        function pauseVoiceTest(habitId) {
+            if (voicePlaybackState[habitId]) {
+                voicePlaybackState[habitId].isPaused = true;
+                speechSynthesis.pause();
+                updateVoiceButtons(habitId, 'paused');
+            }
+        }
+
+        function stopVoiceTest(habitId) {
+            if (voicePlaybackState[habitId]) {
+                voicePlaybackState[habitId].isStopped = true;
+                clearTimeout(voicePlaybackState[habitId].timeoutId);
+                speechSynthesis.cancel();
+                updateVoiceButtons(habitId, 'stopped');
+                delete voicePlaybackState[habitId];
+            }
+        }
+
+        function updateVoiceButtons(habitId, state) {
+            const playBtn = document.getElementById(`playBtn_${habitId}`);
+            const pauseBtn = document.getElementById(`pauseBtn_${habitId}`);
+            const stopBtn = document.getElementById(`stopBtn_${habitId}`);
+            
+            if (!playBtn || !pauseBtn || !stopBtn) return;
+            
+            switch(state) {
+                case 'playing':
+                    playBtn.disabled = true;
+                    pauseBtn.disabled = false;
+                    stopBtn.disabled = false;
+                    playBtn.textContent = '▶';
+                    break;
+                case 'paused':
+                    playBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    playBtn.textContent = '▶';
+                    break;
+                case 'stopped':
+                default:
+                    playBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    stopBtn.disabled = true;
+                    playBtn.textContent = '▶';
+                    break;
+            }
+        }
+
+        function startVoicePlayback(habitId, text) {
+            // 停止之前的播放
+            stopVoiceTest(habitId);
+            
+            const duration = getVoiceDurationInMs(habitId);
+            const startTime = Date.now();
+            
+            voicePlaybackState[habitId] = {
+                startTime: startTime,
+                duration: duration,
+                isPaused: false,
+                isStopped: false,
+                timeoutId: null
+            };
+            
+            updateVoiceButtons(habitId, 'playing');
+            
+            const playVoice = () => {
+                if (voicePlaybackState[habitId]?.isStopped) return;
+                
+                const elapsed = Date.now() - startTime;
+                if (elapsed >= duration) {
+                    stopVoiceTest(habitId);
+                    return;
+                }
+                
+                if (voicePlaybackState[habitId]?.isPaused) {
+                    voicePlaybackState[habitId].timeoutId = setTimeout(() => {
+                        if (!voicePlaybackState[habitId]?.isPaused) {
+                            speechSynthesis.resume();
+                            updateVoiceButtons(habitId, 'playing');
+                        }
+                        playVoice();
+                    }, 100);
+                    return;
+                }
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-TW';
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                
+                utterance.onend = () => {
+                    if (!voicePlaybackState[habitId]?.isStopped && Date.now() - startTime < duration) {
+                        voicePlaybackState[habitId].timeoutId = setTimeout(playVoice, 200);
+                    }
+                };
+                
+                speechSynthesis.speak(utterance);
+            };
+            
+            playVoice();
+            
+            // 設定總時間限制
+            voicePlaybackState[habitId].timeoutId = setTimeout(() => {
+                stopVoiceTest(habitId);
+            }, duration);
+        }
+
         function startIntervalReminder(habitId) {
             const reminder = reminders[habitId];
             if (reminder && reminder.interval) {
                 const habit = habits.find(h => h.id === habitId);
+                
+                // 計算毫秒數
+                let intervalMs = reminder.interval * 60000; // 預設分鐘
+                const unit = reminder.unit || 'minutes';
+                
+                switch(unit) {
+                    case 'minutes':
+                        intervalMs = reminder.interval * 60000;
+                        break;
+                    case 'hours':
+                        intervalMs = reminder.interval * 3600000;
+                        break;
+                    case 'days':
+                        intervalMs = reminder.interval * 86400000;
+                        break;
+                    case 'weeks':
+                        intervalMs = reminder.interval * 604800000;
+                        break;
+                    case 'months':
+                        intervalMs = reminder.interval * 2592000000; // 30天
+                        break;
+                }
+                
                 setInterval(() => {
-                    showNotification(`提醒：該完成「${habit.name}」了！`);
-                    if ('speechSynthesis' in window) {
-                        const utterance = new SpeechSynthesisUtterance(`提醒：該完成${habit.name}了！`);
-                        utterance.lang = 'zh-TW';
-                        speechSynthesis.speak(utterance);
-                    }
-                }, reminder.interval * 60000);
+                    triggerReminder(habitId, habit);
+                }, intervalMs);
             }
         }
 
@@ -548,26 +1095,79 @@
                 const timeUntilReminder = reminderTime.getTime() - now.getTime();
                 
                 setTimeout(() => {
-                    showNotification(`提醒：該完成「${habit.name}」了！`);
-                    if ('speechSynthesis' in window) {
-                        const utterance = new SpeechSynthesisUtterance(`提醒：該完成${habit.name}了！`);
-                        utterance.lang = 'zh-TW';
-                        speechSynthesis.speak(utterance);
-                    }
+                    triggerReminder(habitId, habit);
                     startScheduledReminder(habitId);
                 }, timeUntilReminder);
             }
         }
 
-        function editHabit(id) {
-            const habit = habits.find(h => h.id === id);
-            const newName = prompt('編輯習慣名稱:', habit.name);
-            if (newName && newName.trim()) {
-                habit.name = newName.trim();
-                saveData();
-                renderHabits();
-                showNotification('習慣已更新');
+        function triggerReminder(habitId, habit) {
+            const reminder = reminders[habitId];
+            let reminderText = `提醒：該完成「${habit.name}」了！`;
+            
+            // 使用自定義文字
+            if (reminder?.textType === 'custom' && reminder?.customText) {
+                reminderText = reminder.customText;
             }
+            
+            showNotification(reminderText);
+            
+            // 使用新的語音播放系統
+            if ('speechSynthesis' in window) {
+                startVoicePlayback(habitId, reminderText);
+            }
+        }
+
+        function editHabitInline(id) {
+            const habit = habits.find(h => h.id === id);
+            const nameElement = document.getElementById(`habitName_${id}`);
+            const currentName = habit.name;
+            
+            // 創建輸入框
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentName;
+            input.className = 'habit-name-input';
+            input.style.cssText = `
+                font-size: 1.3em;
+                font-weight: bold;
+                border: 2px solid #007bff;
+                border-radius: 4px;
+                padding: 2px 5px;
+                width: 100%;
+                background: #fff;
+            `;
+            
+            // 替換名稱元素
+            nameElement.replaceWith(input);
+            input.focus();
+            input.select();
+            
+            // 處理保存
+            const saveEdit = () => {
+                const newName = input.value.trim();
+                if (newName && newName !== currentName) {
+                    habit.name = newName;
+                    saveData();
+                    showNotification('習慣名稱已更新');
+                }
+                
+                // 恢復原始元素
+                const newNameElement = document.createElement('div');
+                newNameElement.className = 'habit-name';
+                newNameElement.id = `habitName_${id}`;
+                newNameElement.textContent = habit.name;
+                newNameElement.ondblclick = () => editHabitInline(id);
+                input.replaceWith(newNameElement);
+            };
+            
+            // 事件監聽
+            input.addEventListener('blur', saveEdit);
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    saveEdit();
+                }
+            });
         }
 
         function exportData() {
@@ -652,9 +1252,36 @@
             }, 2000);
         }
 
-        renderHabits();
-        updateStats();
-        initializeReminders();
+        // 初始化應用
+        function initializeApp() {
+            loadData();
+            renderHabits();
+            updateStats();
+            initializeReminders();
+            
+            // 顯示上次儲存時間
+            const lastSave = localStorage.getItem('lastSave');
+            if (lastSave) {
+                const saveTime = new Date(lastSave);
+                console.log('上次儲存時間:', saveTime.toLocaleString());
+            }
+        }
+
+        // 頁面載入時初始化
+        window.addEventListener('load', initializeApp);
+        
+        // 頁面關閉前自動儲存並清理語音
+        window.addEventListener('beforeunload', function() {
+            // 停止所有語音播放
+            Object.keys(voicePlaybackState).forEach(habitId => {
+                stopVoiceTest(parseInt(habitId));
+            });
+            speechSynthesis.cancel();
+            saveData();
+        });
+
+        // 每30秒自動儲存一次
+        setInterval(saveData, 30000);
     </script>
 </body>
 </html>
